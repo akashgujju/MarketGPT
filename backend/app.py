@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, status, Request
+
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.agents import load_tools
 from langchain.agents import initialize_agent
@@ -13,15 +14,15 @@ from io import BytesIO
 import base64 
 import json
 
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+SERPAPI_API_KEY = os.environ.get("SERPAPI_API_KEY")
+
 from pydantic import BaseModel
 
 class CompanyRequest(BaseModel):
     company: str
 class PluginNameRequest(BaseModel):
     plugin: str
-
-os.environ["OPENAI_API_KEY"] = "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"
-os.environ["SERPAPI_API_KEY"] = "bdf25f73214e5c3904ab8535302b94fc39c239430082e7f0a90829ad2d2f1743"
 
 app = FastAPI()
 
@@ -94,6 +95,11 @@ def get_market_share_details(request: CompanyRequest):
   print(json_obj)
   return JSONResponse(json_obj)
 
+@app.get('/')
+def home():
+   return JSONResponse({"APP":"Market GPT"})
+
+
 @app.post('/email/')
 def get_email_from_company(request: CompanyRequest):
   company = request.company
@@ -114,3 +120,13 @@ def get_email_from_company(request: PluginNameRequest):
   plugin = llm(get_personailsed_tweets(plugin_name))
   json_obj = json.loads(plugin)
   return JSONResponse(json_obj)
+
+@app.exception_handler(Exception)
+async def handle_exception(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            # 'message': f'Exception cause: {exc}'
+            'message': f'Something went wrong. Please try again'
+        }
+    )
